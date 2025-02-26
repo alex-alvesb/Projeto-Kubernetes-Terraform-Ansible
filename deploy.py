@@ -2,8 +2,8 @@ import subprocess
 import time
 
 # Directories
-TOFU_DIR = "path_to_file/projeto_k8s_tofu_ansible_github/tofu"
-ANSIBLE_DIR = "path_to_file/projeto_k8s_tofu_ansible_github/ansible"
+TOFU_DIR = "path_to_file/projeto_k8s_tofu_ansible/tofu"
+ANSIBLE_DIR = "path_to_file/projeto_k8s_tofu_ansible/ansible"
 ANSIBLE_INVENTORY = f"{ANSIBLE_DIR}/hosts"
 ANSIBLE_PLAYBOOK = f"{ANSIBLE_DIR}/master_playbook.yaml"
 
