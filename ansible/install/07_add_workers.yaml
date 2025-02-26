@@ -1,0 +1,24 @@
+---
+- hosts: worker-1,worker-2
+  become: yes
+  tasks:
+    - name: Copy join_command_workers.sh to worker-1 and worker-2
+      copy:
+        src: "/tmp/join_command_workers.sh"
+        dest: "/home/{{ ansible_user }}/join_command_workers.sh"
+        mode: '0777'
+
+    - name: Join the workers to the cluster
+      command: bash /home/{{ ansible_user }}/join_command_workers.sh
+
+    - name: Create directory .kube
+      file:
+        path: "/home/{{ ansible_user }}/.kube"
+        state: directory
+        mode: '0755'
+
+    - name: Copy kubeconfig 
+      copy:
+        src: /tmp/admin.conf
+        dest: /home/{{ ansible_user }}/.kube/config
+        mode: '0644'

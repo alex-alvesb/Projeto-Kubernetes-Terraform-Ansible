@@ -1,0 +1,54 @@
+---
+- hosts: kubernetes_cluster
+  become: yes
+  tasks:
+    - name: Update packages and system
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Install basic packages
+      apt:
+        name:
+          - apt-transport-https 
+          - ca-certificates 
+          - software-properties-common
+          - lsb-release
+        state: present
+        force_apt_get: yes
+
+    - name: Add containerd.io GPG Key 
+      shell: curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
+
+    - name: Add containerd.io repository
+      shell: add-apt-repository -y "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+
+    - name: Update packages and system
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Install containerd.io
+      apt:
+        name: containerd.io
+        state: present
+
+    - name: Create containerd.io config directory
+      file:
+        path: /etc/containerd
+        state: directory
+
+    - name: Generate default containerd.io config file
+      shell: containerd config default | tee /etc/containerd/config.toml
+
+    - name: Set "pause image" version to 3.9 in containerd config
+      command: sed -i 's#sandbox_image = "registry.k8s.io/pause:3.8"#sandbox_image = "registry.k8s.io/pause:3.9"#' /etc/containerd/config.toml
+
+    - name: Edit containerd configuration file
+      command: sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+
+    - name: Restart containerd.io service
+      systemd:
+        name: containerd
+        state: restarted
+        enabled: yes

@@ -1,0 +1,88 @@
+---
+- hosts: master-1
+  become: yes
+  tasks:
+    - name: Initialize Kubernetes control plane on master-1
+      command: >
+        kubeadm init --control-plane-endpoint={{ ansible_host }}:6443 --pod-network-cidr=192.168.0.0/16 --upload-certs
+      register: kubeadm_init_output
+
+    - name: Generate certificate key for control-plane join
+      shell: kubeadm init phase upload-certs --upload-certs | tail -1
+      register: certificate_key
+
+    - name: Generate join command for masters 
+      shell: kubeadm token create --print-join-command --certificate-key {{ certificate_key.stdout }}
+      register: join_command_masters
+
+    - name: Generate join command for workers
+      shell: kubeadm token create --print-join-command
+      register: join_command_workers
+
+    - name: Save join command for masters to file
+      copy:
+        content: "{{ join_command_masters.stdout }}"
+        dest: "/home/{{ ansible_user }}/join_command_masters.sh"
+        mode: '0777'
+
+    - name: Save join command for workers to file
+      copy:
+        content: "{{ join_command_workers.stdout }}"
+        dest: "/home/{{ ansible_user }}/join_command_workers.sh"
+        mode: '0777'
+
+    - name: Fetch join command for masters to controller
+      fetch:
+        src: "/home/{{ ansible_user }}/join_command_masters.sh"
+        dest: "/tmp/join_command_masters.sh"
+        flat: yes
+
+    - name: Fetch join command for workers to controller
+      fetch:
+        src: "/home/{{ ansible_user }}/join_command_workers.sh"
+        dest: "/tmp/join_command_workers.sh"
+        flat: yes
+
+#    - name: Copy join_command_masters.sh to master-2 and master-3
+#      copy:
+#        src: "/home/{{ ansible_user }}/join_command_masters.sh"
+#        dest: "/home/{{ ansible_user }}/join_command_masters.sh"
+#      delegate_to: "{{ item }}"
+#      with_items:
+#        - master-2
+#        - master-3
+
+#    - name: Copy join_command_workers.sh to worker-1 and worker-2
+#      copy:
+#        src: "/home/{{ ansible_user }}/join_command_workers.sh"
+#        dest: "/home/{{ ansible_user }}/join_command_workers.sh"
+#      delegate_to: "{{ item }}"
+#      with_items:
+#        - worker-1
+#        - worker-2
+
+    - name: Create directory .kube
+      file:
+        path: "/home/{{ ansible_user }}/.kube"
+        state: directory
+        mode: '0755'
+
+    - name: Configure kubeconfig
+      command: >
+        cp /etc/kubernetes/admin.conf /home/{{ ansible_user }}/.kube/config
+
+    - name: Add permission to kubeconfig file
+      file:
+        path: "/home/{{ ansible_user }}/.kube/config"
+        mode: '0644'
+
+    - name: Fetch kubeconfig to controller
+      fetch:
+        src: /home/{{ ansible_user }}/.kube/config
+        dest: /tmp/admin.conf
+        flat: yes
+
+    - name: Install Calico plugin
+      command: kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+      environment:
+        KUBECONFIG: /home/{{ ansible_user }}/.kube/config

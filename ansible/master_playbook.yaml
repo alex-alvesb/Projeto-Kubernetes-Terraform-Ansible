@@ -1,0 +1,21 @@
+---
+- name: Run install basic packages
+  import_playbook: ./install/01_basic_packages.yaml
+
+- name: Run install Kubernetes dependences
+  import_playbook: ./install/02_k8s_dependences.yaml
+
+#- name: Run install AWS CLI
+#  import_playbook: ./install/03_aws_install.yaml
+
+- name: Run install Kubernetes
+  import_playbook: ./install/04_k8s_install.yaml
+
+- name: Run init cluster
+  import_playbook: ./install/05_cluster_init_master-1.yaml
+
+- name: Run add masters
+  import_playbook: ./install/06_add_masters.yaml
+
+- name: Run add workers 
+  import_playbook: ./install/07_add_workers.yaml
